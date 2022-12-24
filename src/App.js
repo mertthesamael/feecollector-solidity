@@ -1,5 +1,5 @@
 import "./App.css";
-import { ChakraProvider } from "@chakra-ui/react";
+import { ChakraProvider, Image } from "@chakra-ui/react";
 import { Flex } from "@chakra-ui/react";
 import { ethers } from "ethers";
 import { Button } from "@chakra-ui/react";
@@ -20,7 +20,7 @@ function App() {
   const fetchSc = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const contract = new ethers.Contract(
-      "0x83c388c3CC9E9283c8bD4E67Ab14D285Ec816007",
+      "0x1E626Cf9893911A0a82cbD0d6C3E20B2Dd43DfD8",
       abi.abi,
       provider
     );
@@ -33,14 +33,14 @@ function App() {
     setLoading(true);
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const contract = new ethers.Contract(
-      "0x83c388c3CC9E9283c8bD4E67Ab14D285Ec816007",
+      "0x1E626Cf9893911A0a82cbD0d6C3E20B2Dd43DfD8",
       abi.abi,
       provider
     );
-    const balance = await contract.balance();
     contract
-      .on("Tsx", () => {
-        setCaBalance(ethers.utils.formatEther(balance));
+      .on("Tsx", (bal) => {
+        setCaBalance(ethers.utils.formatEther(bal));
+
         setLoading(false);
       })
       .then(() => fetchSc());
@@ -49,19 +49,30 @@ function App() {
   //Withdraw function that is connected to SC
   const withdraw = async (e) => {
     e.preventDefault();
+
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
+    const test = await provider.getNetwork();
     const contract = new ethers.Contract(
-      "0x83c388c3CC9E9283c8bD4E67Ab14D285Ec816007",
+      "0x1E626Cf9893911A0a82cbD0d6C3E20B2Dd43DfD8",
       abi.abi,
       signer
     );
     try {
       await contract
-        .withdraw(e.target.amount.value, e.target.address.value)
+        .withdraw(
+          (e.target.amount.value * 1000000000000000000).toString(),
+          e.target.address.value
+        )
         .then(() => checkEvents());
     } catch (err) {
-      console.log(err.message);
+      console.log(err);
+      toast({
+        status: "error",
+        title: err.message.includes("Only owner can withdraw !")
+          ? "Only Owner can withdraw, and its not you xD"
+          : "Please fill the blanks correctly",
+      });
     }
   };
 
@@ -69,36 +80,41 @@ function App() {
   const login = async () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
-
-    try {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: "0x13881",
-            rpcUrls: ["https://rpc-mumbai.maticvigil.com"],
-            chainName: "Mumbai Testnet",
-            nativeCurrency: {
-              name: "MATIC",
-              symbol: "MATIC",
-              decimals: 18,
+    const network = await provider.getNetwork();
+    if (network.chainId !== 80001) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: "0x13881",
+              rpcUrls: ["https://rpc-mumbai.maticvigil.com"],
+              chainName: "Mumbai Testnet",
+              nativeCurrency: {
+                name: "MATIC",
+                symbol: "MATIC",
+                decimals: 18,
+              },
+              blockExplorerUrls: ["https://polygonscan.com/"],
             },
-            blockExplorerUrls: ["https://polygonscan.com/"],
-          },
-        ],
-      });
-      await window.ethereum
-        .request({ method: "eth_requestAccounts" })
-        .then(() => fetchSc());
+          ],
+        });
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        setIsLogged(true);
+        fetchSc();
+      } catch (err) {
+        setIsLogged(false);
+        toast({
+          title: err.message,
+          status: "error",
+        });
+      }
       setIsLogged(true);
-    } catch (err) {
-      console.log(err);
-      toast({
-        title: err.message,
-        status: "error",
-      });
+    } else {
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      setIsLogged(true);
+      fetchSc();
     }
-    setIsLogged(true);
   };
 
   //Deposit to SC
@@ -107,7 +123,7 @@ function App() {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const contract = new ethers.Contract(
-      "0x83c388c3CC9E9283c8bD4E67Ab14D285Ec816007",
+      "0x1E626Cf9893911A0a82cbD0d6C3E20B2Dd43DfD8",
       abi.abi,
       signer
     );
@@ -115,7 +131,7 @@ function App() {
     const sA = await signer.getAddress();
     const tx = {
       from: sA,
-      to: "0x83c388c3CC9E9283c8bD4E67Ab14D285Ec816007",
+      to: "0x1E626Cf9893911A0a82cbD0d6C3E20B2Dd43DfD8",
       value: ethers.utils.parseEther(e.target.amount.value),
       gasLimit: ethers.utils.hexlify(100000), // 100000
       gasPrice: gasPrice.toNumber(),
@@ -130,9 +146,7 @@ function App() {
       });
     }
   };
-  useEffect(() => {
-   
-  }, []);
+  useEffect(() => {}, []);
   return (
     <ChakraProvider>
       <Flex
@@ -149,8 +163,18 @@ function App() {
           justifyContent="center"
           alignItems="center"
         >
-          <Flex>
-            {isLoading && <Spinner color="red"></Spinner>}
+          <Flex pos={"relative"}>
+            {isLoading && (
+              <Spinner
+                size="lg"
+                top="-2rem"
+                left="0"
+                right="0"
+                margin="0 auto"
+                pos="absolute"
+                color="green"
+              ></Spinner>
+            )}
             <form onSubmit={withdraw}>
               <Input
                 color="white"
@@ -164,13 +188,7 @@ function App() {
                 name="amount"
                 placeholder="Withdraw Amount"
               ></Input>
-              <Input
-                type="submit"
-                bgColor="white"
-                as={Button}
-                color="black"
-                placeholder="Withdraw Amount"
-              >
+              <Input type="submit" bgColor="white" as={Button} color="black">
                 Withdraw
               </Input>
             </form>
@@ -189,7 +207,6 @@ function App() {
                 bgColor="white"
                 as={Button}
                 color="black"
-                placeholder="Withdraw Amount"
               >
                 Deposit to Contract
               </Input>
@@ -197,10 +214,17 @@ function App() {
           </Flex>
           <Box display="grid" placeItems="center">
             {isLogged == false ? (
-              <Button onClick={login}>Login</Button>
+              <Button p="1.5rem" onClick={login}>
+                <Image
+                  h="30px"
+                  marginRight="1rem"
+                  src={require("./assets/metamask.png")}
+                ></Image>
+                Login
+              </Button>
             ) : (
               <Text fontSize="30px" color="white">
-                {caBalance}
+                {"Balance of SC = " + caBalance + " MATIC"}
               </Text>
             )}
           </Box>

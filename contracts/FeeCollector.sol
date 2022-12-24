@@ -9,7 +9,7 @@ contract FeeCollector{
     //Setting default values
     address public owner ;
     uint public balance = 0;
-    event Tsx();
+    event Tsx(uint _balance);
     //Setting owner to the address which launches the contract
     constructor() public{
         owner = msg.sender;
@@ -18,7 +18,7 @@ contract FeeCollector{
     //Fee collecter
     receive() payable external {
         balance += msg.value;
-        emit Tsx();
+        emit Tsx(balance);
     }
 
     //Withdraw function
@@ -27,6 +27,6 @@ contract FeeCollector{
         require(amount<=balance, "Not enough balance to complate this tsx");
         destAddr.transfer(amount);
         balance-=amount;
-        emit Tsx();
+        emit Tsx(balance);
     }
 }
