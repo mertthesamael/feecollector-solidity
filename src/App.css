@@ -1,0 +1,13 @@
+.bg{
+  background-color: #292929;
+}
+
+.mainCard{
+  border-radius: 65px;
+  background: linear-gradient(145deg, #252525, #2c2c2c);
+  box-shadow:  19px 19px 36px #202020,
+               -19px -19px 36px #323232;
+
+padding: 6rem;
+
+}
